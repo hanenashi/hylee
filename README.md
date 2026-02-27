@@ -5,27 +5,26 @@ Hylee is an offline Python web scraper and GUI dashboard designed to archive dai
 These JSON files act as a backendless database for a Tampermonkey userscript.
 
 ## Features
-* **Zero-Dependency GUI:** Built with standard Python `tkinter` for maximum portability and fast execution, even on legacy hardware (e.g., older macOS systems).
-* **Yearly Sharding:** Data is saved into discrete yearly files (e.g., `hyena_2024.json`, `hyena_2025.json`) to prevent massive, monolithic database files.
-* **Live Preview & Logging:** The dashboard features a real-time console log to monitor the scraper's progress and a split-pane JSON preview window to verify data before saving.
-* **Debug Mode:** Allows fetching a limited number of days to test parsing logic against anomalous HTML layouts without crawling an entire year.
+* **Zero-Dependency GUI:** Built with standard Python `tkinter` for maximum portability and fast execution.
+* **Batch Processing & Sharding:** Automatically crawls single years (2025), ranges (2010-2015), or the entire archive (ALL), saving data into discrete yearly files (e.g., `hyena_2024.json`) to prevent monolithic databases.
+* **Interactive Calendar Explorer:** A built-in Treeview lets you load a year, browse days by month, open specific articles in your browser, and run single-day test parses.
+* **Live Preview & Logging:** Features a real-time console log and a live JSON preview window to verify data structures before they are saved.
+* **Debug Limits:** Allows fetching a limited number of days (e.g., 5 days per year) to quickly test parsing logic against anomalous HTML layouts across multiple years.
 
 ## Technical Details: How the Scraper Works
 
-Scraping hyena.cz requires navigating over two decades of evolving, hand-coded HTML. Hylee handles several specific edge cases:
+Scraping hyena.cz requires navigating over two decades of evolving, hand-coded HTML. Hylee handles several specific edge cases using a custom extraction engine:
 
-### 1. Legacy Encoding
-The target website uses `windows-1250` encoding. The scraper explicitly forces this encoding via the `requests` library to prevent corruption of Czech diacritics during the fetch phase.
+### 1. Smart Encoding Fallback
+The target website historically used `windows-1250` encoding, but transitioned over time. The scraper intercepts the raw server bytes and first attempts a strict `utf-8` decode. If a `UnicodeDecodeError` is thrown, it instantly falls back to `windows-1250`, ensuring Czech diacritics are perfectly preserved regardless of the era.
 
-### 2. The "odsud" Anchor
-Because the site lacks modern semantic HTML classes or IDs, the scraper relies on a specific workflow habit of the author. The target data (daily news bullets) is consistently located immediately following a hidden HTML comment containing the word "odsud" (e.g., `` or similar variations). 
+### 2. The "odsud" Anchor & Linear Token Stream
+The site lacks semantic HTML classes. However, the target data consistently follows a hidden HTML comment containing the word "odsud" (e.g., ``). 
 
-Hylee uses `BeautifulSoup4` to locate this specific comment node in the DOM, and then iterates through the subsequent sibling elements to extract the text.
+Because early posts (2003-2006) frequently utilized unclosed `<li>` tags, standard DOM traversal (which assumes infinite nesting for unclosed tags) causes massive data bleeding. To defeat this, Hylee abandons strict DOM hierarchy and uses a **Linear Token Stream Engine**. It walks through elements one-by-one, buffering pure text nodes and ignoring formatting tags, then instantly "flushes" the buffer into a clean bullet whenever it hits a structural tag (`<li>`, `<br>`, `<p>`, etc.).
 
-### 3. Evolving HTML Formats
-The extraction engine is built to handle the structural shifts that occurred over the years:
-* **Legacy Format:** Older posts use raw text separated by `<br>` tags. The scraper extracts these text nodes and filters out common footers, scripts, and navigational noise.
-* **Modern Format (2025+):** Newer posts utilize standard `<ul>` and `<li>` tags. The scraper detects `<li>` elements and cleanly extracts their text contents.
+### 3. The Weather Kill-Switch
+To prevent the scraper from bleeding past the news section into long editorial essays (which often lack clear HTML boundaries), Hylee utilizes a content-aware kill-switch. The author historically concludes the news section with a local weather report. The engine scans the flushed text buffers for specific prefixes (e.g., "Počasí v Praze", "Ráno lilo", "U nás slunečno") and halts extraction immediately upon detection.
 
 ### 4. Sanitization Pipeline
 Extracted strings are passed through a regex-based sanitization function that:
@@ -52,4 +51,6 @@ The final output is a flat JSON dictionary where the key is the ISO 8601 date, a
 2. Launch the dashboard:
    python hylee.py
 
-3. Enter the 4-digit year you wish to archive, select your sanitization preferences, and click "FETCH". Once the JSON preview looks correct, save the shard.
+3. Choose your workflow:
+   * **Explore & Debug:** Enter a single year, click "1. LOAD YEAR TO EXPLORER", and use the middle panel to test specific days.
+   * **Batch Leech:** Enter a year, range (e.g. 2010-2015), or "ALL", then click "2. BATCH LEECH" to automatically crawl and save the JSON shards to your directory.

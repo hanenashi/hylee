@@ -1,18 +1,25 @@
-import tkinter as tk
-from tkinter import ttk, scrolledtext, messagebox
 import requests
 from bs4 import BeautifulSoup, Comment
 import json
 import os
 import re
-import threading
 import time
+import logging
+
+# Configure logging: Errors go to both the console and a local .log file
+logging.basicConfig(
+    level=logging.ERROR,
+    format='%(asctime)s [%(levelname)s] %(message)s',
+    handlers=[
+        logging.FileHandler("hylee_errors.log", encoding='utf-8'),
+        logging.StreamHandler()
+    ]
+)
 
 class HyenaScraper:
-    def __init__(self, log_callback=None):
+    def __init__(self):
         self.base_url = "https://hyena.cz"
-        self.headers = {'User-Agent': 'HyleeArchiver/0.5'}
-        self.log = log_callback if log_callback else print
+        self.headers = {'User-Agent': 'HyleeArchiver-CLI/2.2'}
         
         self.archive_map = {
             2026: "/", 
@@ -53,24 +60,31 @@ class HyenaScraper:
         archive_path = self.archive_map.get(year_int, "/")
         archive_url = f"{self.base_url}{archive_path}"
         
-        self.log(f"Fetching calendar: {archive_url}")
-        
         try:
             r = requests.get(archive_url, headers=self.headers, timeout=10)
-            r.encoding = 'windows-1250'
+            
+            # SMART ENCODING FALLBACK
+            try:
+                html_text = r.content.decode('utf-8')
+            except UnicodeDecodeError:
+                html_text = r.content.decode('windows-1250', errors='replace')
+                
             if r.status_code != 200:
-                self.log(f"Failed to load calendar (Status: {r.status_code})")
+                logging.error(f"Failed to load calendar for {year_full} (Status: {r.status_code})")
                 return []
             
-            soup = BeautifulSoup(r.text, 'html.parser')
+            soup = BeautifulSoup(html_text, 'html.parser')
             links = []
             year_short_str = str(year_full)[-2:] 
             
             for a in soup.find_all('a', href=True):
                 href = a['href']
-                # Changed filter to 'pes.htm' to catch both .htm and .html extensions
-                if 'pes.htm' in href and f"/{year_short_str}/" in href:
-                    links.append(href)
+                # Strictly extract the YY from the YYMMDDpes.htm filename
+                match = re.search(r'(\d{2})\d{4}pes\.html?', href)
+                if match:
+                    link_year = match.group(1)
+                    if link_year == year_short_str:
+                        links.append(href)
             
             clean_links = []
             for link in set(links):
@@ -79,22 +93,26 @@ class HyenaScraper:
                 else:
                     clean_links.append(f"/{link}")
             
-            # Sort chronologically before returning
             clean_links.sort()
             return clean_links
         except Exception as e:
-            self.log(f"Error fetching calendar: {e}")
+            logging.error(f"Error fetching calendar for {year_full}: {e}")
             return []
 
     def scrape_day(self, relative_path, do_sanitize=True):
         url = f"{self.base_url}{relative_path}"
         try:
             r = requests.get(url, headers=self.headers, timeout=10)
-            r.encoding = 'windows-1250'
             if r.status_code != 200:
                 return None
 
-            soup = BeautifulSoup(r.text, 'html.parser')
+            # SMART ENCODING FALLBACK
+            try:
+                html_text = r.content.decode('utf-8')
+            except UnicodeDecodeError:
+                html_text = r.content.decode('windows-1250', errors='replace')
+
+            soup = BeautifulSoup(html_text, 'html.parser')
             bullets = []
             
             start_node = soup.find(
@@ -103,233 +121,130 @@ class HyenaScraper:
             
             if start_node:
                 curr = start_node.next_element
+                text_buffer = []
+                html_tag_bypass = "<" + "!--"
+                
+                # Helper function to compile buffered text into a bullet
+                def flush_buffer():
+                    if not text_buffer: return False
+                    
+                    bullet = " ".join(text_buffer).strip()
+                    if do_sanitize: 
+                        bullet = self.sanitize_text(bullet)
+                    
+                    text_buffer.clear()
+                    
+                    if len(bullet) > 5 and not bullet.startswith(html_tag_bypass):
+                        if "Pokud vám nějaká zpráva přijde debilní" in bullet:
+                            return True # Kill switch
+                            
+                        b_lower = bullet.lower()
+                        if "facebook.com" not in b_lower and "digineff.cz" not in b_lower:
+                            bullets.append(bullet)
+                            
+                            # WEATHER KILL-SWITCH
+                            weather_prefixes = [
+                                "počasí", "u nás", "mrazy", "slunečn", "zataženo", 
+                                "oblačno", "jasno", "dnes", "čeká se", "ráno lilo"
+                            ]
+                            if any(b_lower.startswith(w) for w in weather_prefixes) or \
+                               "počasí v praze" in b_lower or "počasí praha" in b_lower:
+                                return True # Stop parsing immediately
+                    return False
+
+                # Linear Token Stream Parser
                 while curr:
+                    curr_name = getattr(curr, 'name', '')
+                    
+                    # 1. STOP CONDITIONS (Legacy comments)
                     if isinstance(curr, Comment):
                         c_text = curr.lower()
                         if 'konec' in c_text or ('xxxxxxxx' in c_text and 'odsud' not in c_text):
-                            break
-                    
-                    if isinstance(curr, str):
-                        text = curr.strip()
-                        
-                        if "Pokud vám nějaká zpráva přijde debilní" in text:
+                            flush_buffer()
                             break
                             
-                        if do_sanitize:
-                            text = self.sanitize_text(text)
-                        
-                        if len(text) > 15:
-                            html_tag_bypass = "<" + "!--" 
-                            if not text.startswith(html_tag_bypass):
-                                text_lower = text.lower()
-                                if "facebook.com" not in text_lower and "digineff.cz" not in text_lower:
-                                    bullets.append(text)
-                    
+                    # 2. STOP CONDITIONS (Major structural shifts)
+                    if curr_name in ['table', 'div']:
+                        flush_buffer()
+                        break
+                    if curr_name == 'font' and curr.get('color') == 'navy':
+                        flush_buffer()
+                        break
+
+                    # 3. BULLET SPLITTERS (Flush buffer on new lines)
+                    if curr_name in ['li', 'br', 'p', 'ul', 'ol', 'hr']:
+                        if flush_buffer():
+                            break
+
+                    # 4. COLLECT PURE TEXT (Ignores formatting tags like <b>)
+                    if type(curr).__name__ == 'NavigableString':
+                        t = str(curr).strip()
+                        if t:
+                            text_buffer.append(t)
+                            
                     curr = curr.next_element
+                    
+                # Final flush for the last item
+                flush_buffer()
+                
             return bullets
         except Exception as e:
-            self.log(f"Error scraping {url}: {e}")
+            logging.error(f"Error scraping {url}: {e}")
             return None
 
 
-class HyleeGUI:
-    def __init__(self, root):
-        self.root = root
-        self.root.title("Hyena Leecher - Archive Manager v0.5")
-        self.root.geometry("950x650")
-        self.root.configure(bg="#f0f0f0")
-        
-        self.scraper = HyenaScraper(log_callback=self.log)
-        self.current_data = {}
-        self.current_year = ""
-        self.stop_flag = False
-
-        self.build_ui()
-
-    def build_ui(self):
-        main_frame = tk.Frame(self.root, bg="#f0f0f0")
-        main_frame.pack(fill="both", expand=True, padx=10, pady=10)
-
-        left_col = tk.Frame(main_frame, width=350, bg="#f0f0f0")
-        left_col.pack(side="left", fill="y", padx=(0, 10))
-
-        tk.Label(
-            left_col, text="ARCHIVE CRAWLER", font=("Arial", 12, "bold"), bg="#f0f0f0"
-        ).pack(anchor="w")
-        
-        config_frame = tk.LabelFrame(
-            left_col, text=" Settings ", bg="#f0f0f0", pady=10, padx=10
-        )
-        config_frame.pack(fill="x", pady=5)
-
-        tk.Label(config_frame, text="Year (YYYY):", bg="#f0f0f0").grid(row=0, column=0, sticky="w", pady=2)
-        self.year_entry = tk.Entry(config_frame, width=8)
-        self.year_entry.insert(0, "2020")
-        self.year_entry.grid(row=0, column=1, padx=5, sticky="w", pady=2)
-        
-        tk.Label(config_frame, text="Max Days (0=all):", bg="#f0f0f0").grid(row=1, column=0, sticky="w", pady=2)
-        self.limit_entry = tk.Entry(config_frame, width=8)
-        self.limit_entry.insert(0, "10")
-        self.limit_entry.grid(row=1, column=1, padx=5, sticky="w", pady=2)
-
-        self.clean_var = tk.BooleanVar(value=True)
-        tk.Checkbutton(
-            config_frame, text="Sanitize HTML", variable=self.clean_var, bg="#f0f0f0"
-        ).grid(row=2, columnspan=2, sticky="w", pady=(5,0))
-
-        btn_frame = tk.Frame(left_col, bg="#f0f0f0")
-        btn_frame.pack(fill="x", pady=10)
-
-        self.btn_leech = tk.Button(
-            btn_frame, text="FETCH", bg="#2980b9", fg="white", 
-            font=("Arial", 10, "bold"), height=2, command=self.start_leech_thread
-        )
-        self.btn_leech.pack(side="left", fill="x", expand=True, padx=(0, 5))
-
-        self.btn_stop = tk.Button(
-            btn_frame, text="STOP", bg="#c0392b", fg="white", 
-            font=("Arial", 10, "bold"), height=2, state="disabled", command=self.trigger_stop
-        )
-        self.btn_stop.pack(side="right", fill="x", expand=True, padx=(5, 0))
-
-        self.btn_save = tk.Button(
-            left_col, text="SAVE TO JSON SHARD", bg="#27ae60", fg="white", 
-            font=("Arial", 10, "bold"), state="disabled", command=self.save_shard
-        )
-        self.btn_save.pack(fill="x")
-
-        tk.Label(left_col, text="System Log:", bg="#f0f0f0").pack(anchor="w", pady=(15, 0))
-        self.log_widget = scrolledtext.ScrolledText(
-            left_col, height=15, bg="black", fg="#00ff00", font=("Consolas", 9)
-        )
-        self.log_widget.pack(fill="both", expand=True)
-
-        right_col = tk.Frame(main_frame, bg="#ffffff", bd=1, relief="sunken")
-        right_col.pack(side="right", fill="both", expand=True)
-
-        tk.Label(
-            right_col, text=" JSON OUTPUT PREVIEW ", bg="#34495e", 
-            fg="white", font=("Arial", 10, "bold")
-        ).pack(fill="x")
-        
-        self.preview_text = scrolledtext.ScrolledText(
-            right_col, bg="#ffffff", fg="#333333", font=("Consolas", 10), state="disabled"
-        )
-        self.preview_text.pack(fill="both", expand=True)
-
-        self.log("System initialized. Ready to leech.")
-
-    def log(self, msg):
-        self.log_widget.after(0, self._log_insert, msg)
-
-    def _log_insert(self, msg):
-        self.log_widget.insert(tk.END, f"> {msg}\n")
-        self.log_widget.see(tk.END)
-
-    def trigger_stop(self):
-        self.log("Stop requested... finishing current day.")
-        self.stop_flag = True
-
-    def update_preview(self, data_dict):
-        def _update():
-            self.preview_text.config(state="normal")
-            self.preview_text.delete("1.0", tk.END)
-            self.preview_text.insert(
-                tk.END, json.dumps(data_dict, ensure_ascii=False, indent=2)
-            )
-            self.preview_text.config(state="disabled")
-            
-            if data_dict:
-                self.btn_save.config(state="normal")
-            
-            self.btn_leech.config(state="normal", text="FETCH")
-            self.btn_stop.config(state="disabled")
-        self.root.after(0, _update)
-
-    def start_leech_thread(self):
-        year_str = self.year_entry.get().strip()
-        limit_str = self.limit_entry.get().strip()
-        
-        if not year_str.isdigit() or len(year_str) != 4:
-            messagebox.showerror("Input Error", "Please enter a 4-digit year (e.g., 2020).")
-            return
-            
-        max_days = 0
-        if limit_str.isdigit():
-            max_days = int(limit_str)
-
-        self.current_year = year_str
-        self.stop_flag = False
-        
-        self.btn_leech.config(state="disabled", text="LEECHING...")
-        self.btn_stop.config(state="normal")
-        self.btn_save.config(state="disabled")
-        self.current_data = {}
-        self.update_preview({})
-        
-        thread = threading.Thread(
-            target=self.run_scraper, args=(year_str, self.clean_var.get(), max_days)
-        )
-        thread.daemon = True
-        thread.start()
-
-    def run_scraper(self, year_str, do_sanitize, max_days):
-        links = self.scraper.get_daily_links(year_str)
+def main():
+    print("="*50)
+    print("HYLEE CLI BATCH SCRAPER v2.2 (SILENT MODE)")
+    print("="*50)
+    print("Notice: Linear Token Stream Engine Online.")
+    print("Daily progress spam is hidden. Only years and completions will print.")
+    print("Errors are being saved to 'hylee_errors.log'.\n")
+    
+    scraper = HyenaScraper()
+    years = sorted(list(scraper.archive_map.keys()))
+    
+    for year in years:
+        print(f"--- STARTING YEAR: {year} ---")
+        links = scraper.get_daily_links(year)
         
         if not links:
-            self.log("No links found or failed to parse calendar.")
-            self.update_preview({})
-            return
-
-        self.log(f"Found {len(links)} daily links to process.")
+            logging.error(f"No daily links found for {year}. Skipping.")
+            continue
+            
+        year_data = {}
         
-        days_processed = 0
         for link in links:
-            if self.stop_flag:
-                self.log("--- HALTED BY USER ---")
-                break
-                
             match = re.search(r'(\d{2})(\d{2})(\d{2})pes', link)
             if match:
                 date_str = f"20{match.group(1)}-{match.group(2)}-{match.group(3)}"
-                self.log(f"Scraping: {date_str}")
                 
-                bullets = self.scraper.scrape_day(link, do_sanitize)
+                bullets = scraper.scrape_day(link)
                 
                 if bullets is None:
-                    self.log(f"[ERROR] Failed to fetch {date_str}")
+                    logging.error(f"Failed to fetch {date_str} (HTTP Error / Timeout)")
                 elif len(bullets) == 0:
-                    self.log(f"[WARNING] 0 bullets extracted for {date_str}. Unusual format?")
+                    logging.error(f"0 bullets extracted for {date_str}. Unusual HTML format.")
                 else:
-                    self.current_data[date_str] = bullets
-                    
-                days_processed += 1
-                if max_days > 0 and days_processed >= max_days:
-                    self.log(f"--- Reached debug limit ({max_days} days) ---")
-                    break
+                    year_data[date_str] = bullets
                 
-                time.sleep(0.2) 
+                # Polite scraping delay
+                time.sleep(0.2)
+                
+        if year_data:
+            sorted_data = dict(sorted(year_data.items()))
+            filename = f"hyena_{year}.json"
+            
+            try:
+                with open(filename, 'w', encoding='utf-8') as f:
+                    json.dump(sorted_data, f, ensure_ascii=False, indent=2)
+                print(f"[+] SUCCESS: Saved {len(sorted_data)} days to {filename}\n")
+            except Exception as e:
+                logging.error(f"CRITICAL ERROR saving {filename}: {e}")
 
-        self.log("Scraping cycle concluded.")
-        sorted_data = dict(sorted(self.current_data.items()))
-        self.current_data = sorted_data
-        self.update_preview(self.current_data)
-
-    def save_shard(self):
-        if not self.current_data:
-            return
-        
-        filename = f"hyena_{self.current_year}.json"
-        try:
-            with open(filename, 'w', encoding='utf-8') as f:
-                json.dump(self.current_data, f, ensure_ascii=False, indent=2)
-            self.log(f"SUCCESS: Data saved to {filename}")
-            messagebox.showinfo("Saved", f"Archive saved to {filename} successfully.")
-        except Exception as e:
-            self.log(f"ERROR saving file: {e}")
-            messagebox.showerror("Save Error", str(e))
+    print("="*50)
+    print("ALL YEARS PROCESSED.")
+    print("="*50)
 
 if __name__ == "__main__":
-    root = tk.Tk()
-    app = HyleeGUI(root)
-    root.mainloop()
+    main()

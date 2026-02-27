@@ -1,0 +1,188 @@
+> System initialized. Token Stream Engine online.
+
+--- INITIATING CRAWL: 2003 ---
+> Fetching calendar for 2003: https://hyena.cz/archiv1.html
+> Found 239 daily links for 2003.
+> [ERROR] Failed to fetch 2003-02-13
+> [WARNING] 0 bullets extracted for 2003-06-14.
+> [ERROR] Failed to fetch 2003-07-31
+> [ERROR] Failed to fetch 2003-11-10
+> AUTO-SAVED: hyena_2003.json
+> 
+--- INITIATING CRAWL: 2004 ---
+> Fetching calendar for 2004: https://hyena.cz/archiv1.html
+> Found 240 daily links for 2004.
+> [ERROR] Failed to fetch 2004-01-26
+> [ERROR] Failed to fetch 2004-05-03
+> [ERROR] Failed to fetch 2004-05-04
+> [ERROR] Failed to fetch 2004-05-17
+> [ERROR] Failed to fetch 2004-05-18
+> AUTO-SAVED: hyena_2004.json
+> 
+--- INITIATING CRAWL: 2005 ---
+> Fetching calendar for 2005: https://hyena.cz/archiv1.html
+> Found 247 daily links for 2005.
+> AUTO-SAVED: hyena_2005.json
+> 
+--- INITIATING CRAWL: 2006 ---
+> Fetching calendar for 2006: https://hyena.cz/archiv2.html
+> Found 264 daily links for 2006.
+> [ERROR] Failed to fetch 2006-02-12
+> [ERROR] Failed to fetch 2006-05-28
+> AUTO-SAVED: hyena_2006.json
+> 
+--- INITIATING CRAWL: 2007 ---
+> Fetching calendar for 2007: https://hyena.cz/archiv2.html
+> Found 243 daily links for 2007.
+> [ERROR] Failed to fetch 2007-06-30
+> AUTO-SAVED: hyena_2007.json
+> 
+--- INITIATING CRAWL: 2008 ---
+> Fetching calendar for 2008: https://hyena.cz/archiv3.html
+> Found 237 daily links for 2008.
+> AUTO-SAVED: hyena_2008.json
+> 
+--- INITIATING CRAWL: 2009 ---
+> Fetching calendar for 2009: https://hyena.cz/archiv4.html
+> Found 236 daily links for 2009.
+> Error scraping https://hyena.cz/09/01/090129pes.html: HTTPSConnectionPool(host='hyena.cz', port=443): Read timed out. (read timeout=10)
+> [ERROR] Failed to fetch 2009-01-29
+> [WARNING] 0 bullets extracted for 2009-02-17.
+> [ERROR] Failed to fetch 2009-03-18
+> AUTO-SAVED: hyena_2009.json
+> 
+--- INITIATING CRAWL: 2010 ---
+> Fetching calendar for 2010: https://hyena.cz/archiv5.html
+> Found 254 daily links for 2010.
+> [WARNING] 0 bullets extracted for 2010-01-12.
+> [ERROR] Failed to fetch 2010-02-26
+> AUTO-SAVED: hyena_2010.json
+> 
+--- INITIATING CRAWL: 2011 ---
+> Fetching calendar for 2011: https://hyena.cz/archiv6.htm
+> Found 254 daily links for 2011.
+> [ERROR] Failed to fetch 2011-04-24
+> [ERROR] Failed to fetch 2011-06-26
+> [ERROR] Failed to fetch 2011-08-07
+> AUTO-SAVED: hyena_2011.json
+> 
+--- INITIATING CRAWL: 2012 ---
+> Fetching calendar for 2012: https://hyena.cz/archiv7.htm
+> Found 259 daily links for 2012.
+> [ERROR] Failed to fetch 2012-03-25
+> [WARNING] 0 bullets extracted for 2012-12-24.
+> [ERROR] Failed to fetch 2012-12-44
+> AUTO-SAVED: hyena_2012.json
+> 
+--- INITIATING CRAWL: 2013 ---
+> Fetching calendar for 2013: https://hyena.cz/archiv8.htm
+> Found 233 daily links for 2013.
+> AUTO-SAVED: hyena_2013.json
+> 
+--- INITIATING CRAWL: 2014 ---
+> Fetching calendar for 2014: https://hyena.cz/archiv9.htm
+> Found 277 daily links for 2014.
+> [ERROR] Failed to fetch 2014-09-27
+> AUTO-SAVED: hyena_2014.json
+> 
+--- INITIATING CRAWL: 2015 ---
+> Fetching calendar for 2015: https://hyena.cz/archiv10.htm
+> Found 259 daily links for 2015.
+> [ERROR] Failed to fetch 2015-02-19
+> [ERROR] Failed to fetch 2015-10-16
+> [ERROR] Failed to fetch 2015-12-20
+> AUTO-SAVED: hyena_2015.json
+> 
+--- INITIATING CRAWL: 2016 ---
+> Fetching calendar for 2016: https://hyena.cz/archiv11.htm
+> Found 264 daily links for 2016.
+> [ERROR] Failed to fetch 2016-01-19
+> [ERROR] Failed to fetch 2016-01-28
+> [ERROR] Failed to fetch 2016-01-29
+> [ERROR] Failed to fetch 2016-02-12
+> [ERROR] Failed to fetch 2016-02-26
+> [ERROR] Failed to fetch 2016-03-22
+> [ERROR] Failed to fetch 2016-11-29
+> [ERROR] Failed to fetch 2016-11-30
+> [WARNING] 0 bullets extracted for 2016-12-26.
+> [WARNING] 0 bullets extracted for 2016-12-27.
+> AUTO-SAVED: hyena_2016.json
+> 
+--- INITIATING CRAWL: 2017 ---
+> Fetching calendar for 2017: https://hyena.cz/inc/archiv12.htm
+> Found 260 daily links for 2017.
+> [ERROR] Failed to fetch 2017-04-07
+> [ERROR] Failed to fetch 2017-06-27
+> AUTO-SAVED: hyena_2017.json
+> 
+--- INITIATING CRAWL: 2018 ---
+> Fetching calendar for 2018: https://hyena.cz/inc/archiv13.htm
+> Found 291 daily links for 2018.
+> [ERROR] Failed to fetch 2018-02-10
+> [ERROR] Failed to fetch 2018-03-29
+> [ERROR] Failed to fetch 2018-10-30
+> [ERROR] Failed to fetch 2018-10-31
+> AUTO-SAVED: hyena_2018.json
+> 
+--- INITIATING CRAWL: 2019 ---
+> Fetching calendar for 2019: https://hyena.cz/inc/archiv14.htm
+> Found 271 daily links for 2019.
+> [ERROR] Failed to fetch 2019-07-30
+> [WARNING] 0 bullets extracted for 2019-08-20.
+> [WARNING] 0 bullets extracted for 2019-08-23.
+> [ERROR] Failed to fetch 2019-12-22
+> AUTO-SAVED: hyena_2019.json
+> 
+--- INITIATING CRAWL: 2020 ---
+> Fetching calendar for 2020: https://hyena.cz/inc/archiv15.htm
+> Found 137 daily links for 2020.
+> [ERROR] Failed to fetch 2020-05-30
+> AUTO-SAVED: hyena_2020.json
+> 
+--- INITIATING CRAWL: 2021 ---
+> Fetching calendar for 2021: https://hyena.cz/inc/archiv16.htm
+> Found 292 daily links for 2021.
+> AUTO-SAVED: hyena_2021.json
+> 
+--- INITIATING CRAWL: 2022 ---
+> Fetching calendar for 2022: https://hyena.cz/inc/archiv17.htm
+> Found 305 daily links for 2022.
+> [ERROR] Failed to fetch 2022-04-24
+> [ERROR] Failed to fetch 2022-08-19
+> AUTO-SAVED: hyena_2022.json
+> 
+--- INITIATING CRAWL: 2023 ---
+> Fetching calendar for 2023: https://hyena.cz/inc/archiv18.htm
+> Found 288 daily links for 2023.
+> [ERROR] Failed to fetch 2023-01-20
+> [WARNING] 0 bullets extracted for 2023-03-13.
+> [ERROR] Failed to fetch 2023-04-28
+> [ERROR] Failed to fetch 2023-07-06
+> [WARNING] 0 bullets extracted for 2023-09-05.
+> [ERROR] Failed to fetch 2023-09-29
+> AUTO-SAVED: hyena_2023.json
+> 
+--- INITIATING CRAWL: 2024 ---
+> Fetching calendar for 2024: https://hyena.cz/inc/archiv19.htm
+> Found 292 daily links for 2024.
+> [ERROR] Failed to fetch 2024-02-24
+> [ERROR] Failed to fetch 2024-07-25
+> [ERROR] Failed to fetch 2024-09-04
+> AUTO-SAVED: hyena_2024.json
+> 
+--- INITIATING CRAWL: 2025 ---
+> Fetching calendar for 2025: https://hyena.cz/inc/archiv20.htm
+> Found 284 daily links for 2025.
+> [ERROR] Failed to fetch 2025-01-04
+> [ERROR] Failed to fetch 2025-08-30
+> [ERROR] Failed to fetch 2025-09-15
+> [ERROR] Failed to fetch 2025-11-15
+> AUTO-SAVED: hyena_2025.json
+> 
+--- INITIATING CRAWL: 2026 ---
+> Fetching calendar for 2026: https://hyena.cz/
+> Found 47 daily links for 2026.
+> AUTO-SAVED: hyena_2026.json
+> 
++++ BATCH SCRAPING COMPLETE +++
+
